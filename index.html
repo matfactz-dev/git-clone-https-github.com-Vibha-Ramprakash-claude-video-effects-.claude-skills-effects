@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- ARTIFACT-START -->
+<title>Sum Sprint</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shantell+Sans:wght@500;700&family=Nunito:wght@400;600;800&display=swap">
+<style>
+  /* Layout: one centered flash card on a ruled-paper desk; score strip above, controls below. */
+  :root {
+    --desk: #e9eef5;
+    --card: #fffdf8;
+    --rule: #cfdcec;
+    --margin: #f2a3a3;
+    --ink: #1f2a44;
+    --muted: #5d6886;
+    --accent: #2f5bd3;
+    --good: #1d8a4f;
+    --good-bg: #e2f5ea;
+    --bad: #c2352b;
+    --bad-bg: #fbe6e3;
+    --font-num: "Shantell Sans", "Comic Sans MS", "Segoe Print", cursive;
+    --font-body: "Nunito", "Segoe UI", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --desk: #11151f; --card: #1b2130; --rule: #2a3347; --margin: #6e3a44;
+      --ink: #eef1f8; --muted: #9aa5c0; --accent: #7fa2ff;
+      --good: #5fd394; --good-bg: #16352a; --bad: #ff8a7f; --bad-bg: #3d1e1e;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --desk: #11151f; --card: #1b2130; --rule: #2a3347; --margin: #6e3a44;
+    --ink: #eef1f8; --muted: #9aa5c0; --accent: #7fa2ff;
+    --good: #5fd394; --good-bg: #16352a; --bad: #ff8a7f; --bad-bg: #3d1e1e;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { min-height: 100%; }
+  body {
+    margin: 0;
+    background: var(--desk);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    padding-block: 32px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 460px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  h1 { font-family: var(--font-num); font-weight: 700; font-size: 1.75rem; margin: 0; letter-spacing: -0.01em; }
+  .levels { display: flex; gap: 6px; }
+  .levels button {
+    font: 600 0.8rem var(--font-body); letter-spacing: 0.04em; text-transform: uppercase;
+    border: 1.5px solid var(--rule); background: transparent; color: var(--muted);
+    padding: 6px 10px; border-radius: 999px; cursor: pointer;
+  }
+  .levels button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--card); }
+
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-variant-numeric: tabular-nums; }
+  .stat { text-align: center; padding: 8px 4px; }
+  .stat b { display: block; font-family: var(--font-num); font-size: 1.5rem; line-height: 1.1; }
+  .stat span { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+  .card {
+    position: relative;
+    background: var(--card);
+    background-image: repeating-linear-gradient(to bottom, transparent 0 39px, var(--rule) 39px 40px);
+    border-radius: 6px;
+    box-shadow: 0 1px 0 var(--rule), 0 14px 30px -18px rgba(20, 30, 60, 0.45);
+    padding: 40px 28px 28px 52px;
+    overflow: hidden;
+  }
+  .card::before { content: ""; position: absolute; top: 0; bottom: 0; left: 34px; width: 2px; background: var(--margin); }
+
+  .problem {
+    font-family: var(--font-num); font-weight: 700;
+    font-size: clamp(2.6rem, 12vw, 4rem); line-height: 1.1;
+    display: grid; grid-template-columns: auto auto; justify-content: end; column-gap: 14px;
+    font-variant-numeric: tabular-nums; text-align: right;
+  }
+  .problem .op { color: var(--accent); }
+  .bar { grid-column: 1 / -1; height: 4px; background: var(--ink); border-radius: 2px; margin: 6px 0 10px; }
+
+  form { display: contents; }
+  .answer-row { grid-column: 1 / -1; display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
+  .answer-row .eq { color: var(--muted); }
+  #answer {
+    width: 5.2ch; font: inherit; color: var(--ink); text-align: right;
+    background: transparent; border: none; border-bottom: 3px dashed var(--muted);
+    padding: 0 2px; outline: none; border-radius: 0;
+    -moz-appearance: textfield;
+  }
+  #answer::-webkit-outer-spin-button, #answer::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  #answer:focus-visible { border-bottom-color: var(--accent); border-bottom-style: solid; }
+  #answer:disabled { color: var(--ink); opacity: 1; }
+
+  .verdict {
+    margin-top: 20px; min-height: 52px; border-radius: 10px;
+    display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+    font-weight: 800; font-size: 1.1rem;
+  }
+  .verdict small { font-weight: 600; font-size: 0.95rem; }
+  .verdict.idle { color: var(--muted); font-weight: 600; font-size: 0.95rem; }
+  .verdict.good { background: var(--good-bg); color: var(--good); }
+  .verdict.bad { background: var(--bad-bg); color: var(--bad); }
+  .verdict .mark { font-family: var(--font-num); font-size: 1.6rem; line-height: 1; }
+
+  .actions { display: flex; gap: 10px; }
+  .actions button {
+    flex: 1; font: 800 1rem var(--font-body); padding: 14px; border-radius: 12px; cursor: pointer;
+    border: 2px solid var(--accent);
+  }
+  #check { background: var(--accent); color: var(--card); }
+  #next { background: transparent; color: var(--accent); }
+  .actions button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  .history { font-size: 0.9rem; color: var(--muted); }
+  .history h2 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 6px; font-weight: 800; }
+  .history ol { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  .history li { font-family: var(--font-num); padding: 3px 9px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+  .history li.good { background: var(--good-bg); color: var(--good); }
+  .history li.bad { background: var(--bad-bg); color: var(--bad); }
+  .hint { font-size: 0.85rem; color: var(--muted); text-align: center; }
+
+  @keyframes pop { 0% { transform: scale(0.96); } 60% { transform: scale(1.02); } 100% { transform: scale(1); } }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  .card.pop { animation: pop 0.3s ease-out; }
+  .card.shake { animation: shake 0.3s ease-in-out; }
+  @media (prefers-reduced-motion: reduce) { .card.pop, .card.shake { animation: none; } }
+</style>
+<!-- ARTIFACT-HEAD-END -->
+</head>
+<body>
+<!-- ARTIFACT-BODY-START -->
+<main class="wrap">
+  <header>
+    <h1>Sum Sprint</h1>
+    <div class="levels" role="group" aria-label="Difficulty">
+      <button type="button" data-max="10" aria-pressed="true" id="lvl-easy">Easy</button>
+      <button type="button" data-max="50" aria-pressed="false" id="lvl-med">Medium</button>
+      <button type="button" data-max="100" aria-pressed="false" id="lvl-hard">Hard</button>
+    </div>
+  </header>
+
+  <section class="stats" aria-label="Score">
+    <div class="stat"><b id="s-correct">0</b><span>Correct</span></div>
+    <div class="stat"><b id="s-tried">0</b><span>Attempted</span></div>
+    <div class="stat"><b id="s-streak">0</b><span>Streak</span></div>
+  </section>
+
+  <section class="card" id="card" aria-live="polite">
+    <form id="quiz" autocomplete="off">
+      <div class="problem">
+        <span></span><span id="a">5</span>
+        <span class="op">+</span><span id="b">8</span>
+        <div class="bar"></div>
+        <div class="answer-row">
+          <span class="eq">=</span>
+          <label for="answer" class="sr" hidden>Your answer</label>
+          <input id="answer" type="number" inputmode="numeric" aria-label="Your answer" required>
+        </div>
+      </div>
+      <div class="verdict idle" id="verdict">Type your answer and press Enter.</div>
+    </form>
+  </section>
+
+  <div class="actions">
+    <button type="submit" form="quiz" id="check">Check</button>
+    <button type="button" id="next">Next question</button>
+  </div>
+
+  <section class="history" aria-label="Recent answers">
+    <h2>Recent</h2>
+    <ol id="history"></ol>
+  </section>
+  <p class="hint">Enter checks your answer. Press Enter again for the next one.</p>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    a: $("a"), b: $("b"), answer: $("answer"), verdict: $("verdict"), card: $("card"),
+    check: $("check"), next: $("next"), form: $("quiz"), history: $("history"),
+    correct: $("s-correct"), tried: $("s-tried"), streak: $("s-streak"),
+  };
+
+  const state = { max: 10, a: 5, b: 8, answered: false, correct: 0, tried: 0, streak: 0, log: [] };
+
+  // Random whole number from 0 to max, inclusive.
+  const rand = (max) => Math.floor(Math.random() * (max + 1));
+
+  function newQuestion() {
+    let a, b;
+    do { a = rand(state.max); b = rand(state.max); }
+    while (a === state.a && b === state.b); // avoid repeating the same question twice in a row
+    state.a = a; state.b = b; state.answered = false;
+    els.a.textContent = a; els.b.textContent = b;
+    els.answer.value = ""; els.answer.disabled = false;
+    els.verdict.className = "verdict idle";
+    els.verdict.textContent = "Type your answer and press Enter.";
+    els.check.disabled = false;
+    els.card.classList.remove("pop", "shake");
+    els.answer.focus();
+  }
+
+  function check() {
+    if (state.answered) { newQuestion(); return; }
+    const raw = els.answer.value.trim();
+    if (raw === "") {
+      els.verdict.className = "verdict idle";
+      els.verdict.textContent = "Enter a number first.";
+      els.answer.focus();
+      return;
+    }
+    const given = Number(raw);
+    const expected = state.a + state.b;
+    const ok = given === expected;
+
+    state.answered = true;
+    state.tried++;
+    if (ok) { state.correct++; state.streak++; } else { state.streak = 0; }
+
+    els.verdict.className = "verdict " + (ok ? "good" : "bad");
+    els.verdict.innerHTML = ok
+      ? '<span class="mark">✓</span> Correct'
+      : '<span class="mark">✗</span> Not quite <small>— ' + state.a + " + " + state.b + " = " + expected + "</small>";
+
+    els.card.classList.remove("pop", "shake");
+    void els.card.offsetWidth; // restart the animation
+    els.card.classList.add(ok ? "pop" : "shake");
+
+    els.answer.disabled = true;
+    els.check.disabled = true;
+    state.log.unshift({ text: state.a + "+" + state.b + "=" + given, ok });
+    state.log = state.log.slice(0, 10);
+    render();
+    els.next.focus();
+  }
+
+  function render() {
+    els.correct.textContent = state.correct;
+    els.tried.textContent = state.tried;
+    els.streak.textContent = state.streak;
+    els.history.innerHTML = state.log.length
+      ? state.log.map((r) => '<li class="' + (r.ok ? "good" : "bad") + '">' + r.text + "</li>").join("")
+      : '<li style="font-family:inherit;padding:0">Your answers will show up here.</li>';
+  }
+
+  els.form.addEventListener("submit", (e) => { e.preventDefault(); check(); });
+  els.next.addEventListener("click", newQuestion);
+
+  document.querySelectorAll(".levels button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".levels button").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+      state.max = Number(btn.dataset.max);
+      newQuestion();
+    });
+  });
+
+  render();
+  els.answer.focus();
+})();
+</script>
+<!-- ARTIFACT-END -->
+</body>
+</html>
