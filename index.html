@@ -116,7 +116,10 @@
     border: 2px solid var(--accent);
   }
   #check { background: var(--accent); color: var(--card); }
-  #next { background: transparent; color: var(--accent); }
+  .countdown { height: 4px; border-radius: 2px; background: currentColor; opacity: 0.35; margin-top: 8px; width: 100%; transform-origin: left; }
+  .countdown.run { animation: drain var(--wait, 1500ms) linear forwards; }
+  @keyframes drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+  .verdict-body { flex: 1; min-width: 0; }
   .actions button:disabled { opacity: 0.4; cursor: not-allowed; }
   button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 
@@ -172,14 +175,13 @@
 
   <div class="actions">
     <button type="submit" form="quiz" id="check">Check</button>
-    <button type="button" id="next">Next question</button>
   </div>
 
   <section class="history" aria-label="Recent answers">
     <h2>Recent</h2>
     <ol id="history"></ol>
   </section>
-  <p class="hint">Enter checks your answer. Press Enter again for the next one.</p>
+  <p class="hint">Check shows the result, then the next question appears by itself. Press Enter to skip the wait.</p>
 </main>
 
 <script>
@@ -187,16 +189,20 @@
   const $ = (id) => document.getElementById(id);
   const els = {
     a: $("a"), b: $("b"), answer: $("answer"), verdict: $("verdict"), card: $("card"),
-    check: $("check"), next: $("next"), form: $("quiz"), history: $("history"),
+    check: $("check"), form: $("quiz"), history: $("history"),
     correct: $("s-correct"), tried: $("s-tried"), streak: $("s-streak"),
   };
 
-  const state = { max: 10, a: 5, b: 8, answered: false, correct: 0, tried: 0, streak: 0, log: [] };
+  const state = { max: 10, a: 5, b: 8, answered: false, timer: null, correct: 0, tried: 0, streak: 0, log: [] };
 
   // Random whole number from 0 to max, inclusive.
   const rand = (max) => Math.floor(Math.random() * (max + 1));
 
+  // How long the result stays on screen before the next question (ms).
+  const WAIT_CORRECT = 1500, WAIT_WRONG = 3000;
+
   function newQuestion() {
+    clearTimeout(state.timer); state.timer = null;
     let a, b;
     do { a = rand(state.max); b = rand(state.max); }
     while (a === state.a && b === state.b); // avoid repeating the same question twice in a row
@@ -205,7 +211,6 @@
     els.answer.value = ""; els.answer.disabled = false;
     els.verdict.className = "verdict idle";
     els.verdict.textContent = "Type your answer and press Enter.";
-    els.check.disabled = false;
     els.card.classList.remove("pop", "shake");
     els.answer.focus();
   }
@@ -228,20 +233,22 @@
     if (ok) { state.correct++; state.streak++; } else { state.streak = 0; }
 
     els.verdict.className = "verdict " + (ok ? "good" : "bad");
-    els.verdict.innerHTML = ok
-      ? '<span class="mark">✓</span> Correct'
-      : '<span class="mark">✗</span> Not quite <small>— ' + state.a + " + " + state.b + " = " + expected + "</small>";
+    const wait = ok ? WAIT_CORRECT : WAIT_WRONG;
+    els.verdict.innerHTML = '<span class="mark">' + (ok ? "✓" : "✗") + '</span><div class="verdict-body">'
+      + (ok ? "Correct" : "Not quite <small>— " + state.a + " + " + state.b + " = " + expected + "</small>")
+      + '<div class="countdown" style="--wait:' + wait + 'ms"></div></div>';
+    requestAnimationFrame(() => { const bar = els.verdict.querySelector(".countdown"); if (bar) bar.classList.add("run"); });
 
     els.card.classList.remove("pop", "shake");
     void els.card.offsetWidth; // restart the animation
     els.card.classList.add(ok ? "pop" : "shake");
 
     els.answer.disabled = true;
-    els.check.disabled = true;
     state.log.unshift({ text: state.a + "+" + state.b + "=" + given, ok });
     state.log = state.log.slice(0, 10);
     render();
-    els.next.focus();
+    els.check.focus(); // keeps Enter working to skip ahead
+    state.timer = setTimeout(newQuestion, wait);
   }
 
   function render() {
@@ -254,7 +261,6 @@
   }
 
   els.form.addEventListener("submit", (e) => { e.preventDefault(); check(); });
-  els.next.addEventListener("click", newQuestion);
 
   document.querySelectorAll(".levels button").forEach((btn) => {
     btn.addEventListener("click", () => {
