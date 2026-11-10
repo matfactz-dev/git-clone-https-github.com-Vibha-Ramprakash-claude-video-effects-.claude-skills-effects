@@ -8,7 +8,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shantell+Sans:wght@500;700&family=Nunito:wght@400;600;800&display=swap">
 <style>
-  /* Layout: one centered flash card on a ruled-paper desk; score strip above, controls below. */
+  /* Layout: one centered column on a desk; flash card first, then progress graphs and history. */
   :root {
     --desk: #e9eef5;
     --card: #fffdf8;
@@ -17,6 +17,8 @@
     --ink: #1f2a44;
     --muted: #5d6886;
     --accent: #2f5bd3;
+    --accent-soft: #a3b8ee;
+    --accent-wash: rgba(47, 91, 211, 0.12);
     --good: #1d8a4f;
     --good-bg: #e2f5ea;
     --bad: #c2352b;
@@ -27,18 +29,21 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       --desk: #11151f; --card: #1b2130; --rule: #2a3347; --margin: #6e3a44;
-      --ink: #eef1f8; --muted: #9aa5c0; --accent: #7fa2ff;
+      --ink: #eef1f8; --muted: #9aa5c0; --accent: #7fa2ff; --accent-soft: #3f5389;
+      --accent-wash: rgba(127, 162, 255, 0.16);
       --good: #5fd394; --good-bg: #16352a; --bad: #ff8a7f; --bad-bg: #3d1e1e;
       color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
     --desk: #11151f; --card: #1b2130; --rule: #2a3347; --margin: #6e3a44;
-    --ink: #eef1f8; --muted: #9aa5c0; --accent: #7fa2ff;
+    --ink: #eef1f8; --muted: #9aa5c0; --accent: #7fa2ff; --accent-soft: #3f5389;
+    --accent-wash: rgba(127, 162, 255, 0.16);
     --good: #5fd394; --good-bg: #16352a; --bad: #ff8a7f; --bad-bg: #3d1e1e;
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { min-height: 100%; }
   body {
     margin: 0;
@@ -50,57 +55,66 @@
     padding-left: max(16px, env(safe-area-inset-left, 0px));
     padding-right: max(16px, env(safe-area-inset-right, 0px));
   }
-  .wrap { max-width: 460px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
-  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .wrap { max-width: 520px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
   h1 { font-family: var(--font-num); font-weight: 700; font-size: 1.75rem; margin: 0; letter-spacing: -0.01em; }
-  .levels { display: flex; gap: 6px; }
-  .levels button {
-    font: 600 0.8rem var(--font-body); letter-spacing: 0.04em; text-transform: uppercase;
+  h2 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; margin: 0; font-weight: 800; color: var(--muted); }
+
+  /* Mode + option chips */
+  .controls { display: flex; flex-direction: column; gap: 10px; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .row .label { font-size: 0.8rem; color: var(--muted); font-weight: 600; margin-right: 4px; }
+  .chip {
+    font: 700 0.8rem var(--font-body); letter-spacing: 0.03em;
     border: 1.5px solid var(--rule); background: transparent; color: var(--muted);
-    padding: 6px 10px; border-radius: 999px; cursor: pointer;
+    padding: 6px 11px; border-radius: 999px; cursor: pointer; font-variant-numeric: tabular-nums;
   }
-  .levels button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--card); }
+  .chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--card); }
+  .seg { display: inline-flex; border: 1.5px solid var(--rule); border-radius: 12px; padding: 3px; gap: 3px; background: var(--card); }
+  .seg button {
+    font: 800 0.9rem var(--font-body); border: none; background: transparent; color: var(--muted);
+    padding: 8px 14px; border-radius: 9px; cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--card); }
 
   .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-variant-numeric: tabular-nums; }
-  .stat { text-align: center; padding: 8px 4px; }
+  .stat { text-align: center; padding: 4px; }
   .stat b { display: block; font-family: var(--font-num); font-size: 1.5rem; line-height: 1.1; }
   .stat span { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
 
+  /* Flash card */
   .card {
     position: relative;
     background: var(--card);
     background-image: repeating-linear-gradient(to bottom, transparent 0 39px, var(--rule) 39px 40px);
     border-radius: 6px;
     box-shadow: 0 1px 0 var(--rule), 0 14px 30px -18px rgba(20, 30, 60, 0.45);
-    padding: 40px 28px 28px 52px;
+    padding: 14px 20px 22px 50px;
     overflow: hidden;
   }
   .card::before { content: ""; position: absolute; top: 0; bottom: 0; left: 34px; width: 2px; background: var(--margin); }
-
-  .problem {
-    font-family: var(--font-num); font-weight: 700;
-    font-size: clamp(2.6rem, 12vw, 4rem); line-height: 1.1;
-    display: grid; grid-template-columns: auto auto; justify-content: end; column-gap: 14px;
-    font-variant-numeric: tabular-nums; text-align: right;
-  }
+  .eyebrow { font-size: 0.78rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); height: 26px; }
+  .sum { font-family: var(--font-num); font-weight: 700; font-size: clamp(2.4rem, 11vw, 3.6rem); line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .problem { display: grid; grid-template-columns: auto auto; justify-content: end; column-gap: 14px; text-align: right; }
   .problem .op { color: var(--accent); }
-  .bar { grid-column: 1 / -1; height: 4px; background: var(--ink); border-radius: 2px; margin: 6px 0 10px; }
-
-  form { display: contents; }
-  .answer-row { grid-column: 1 / -1; display: flex; justify-content: flex-end; align-items: center; gap: 12px; }
+  .bar { height: 4px; background: var(--ink); border-radius: 2px; margin: 6px 0 10px; }
+  .answer-row { display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap; }
   .answer-row .eq { color: var(--muted); }
   #answer {
-    width: 5.2ch; font: inherit; color: var(--ink); text-align: right;
+    width: 4.4ch; font: inherit; color: var(--ink); text-align: right;
     background: transparent; border: none; border-bottom: 3px dashed var(--muted);
-    padding: 0 2px; outline: none; border-radius: 0;
-    -moz-appearance: textfield;
+    padding: 0 2px; outline: none; border-radius: 0; -moz-appearance: textfield;
   }
   #answer::-webkit-outer-spin-button, #answer::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   #answer:focus-visible { border-bottom-color: var(--accent); border-bottom-style: solid; }
   #answer:disabled { color: var(--ink); opacity: 1; }
+  #submit {
+    font: 800 1rem var(--font-body); background: var(--accent); color: var(--card);
+    border: none; border-radius: 12px; padding: 14px 18px; cursor: pointer; align-self: center;
+  }
+  #submit:active { transform: translateY(1px); }
 
   .verdict {
-    margin-top: 20px; min-height: 52px; border-radius: 10px;
+    margin-top: 16px; min-height: 52px; border-radius: 10px;
     display: flex; align-items: center; gap: 10px; padding: 12px 14px;
     font-weight: 800; font-size: 1.1rem;
   }
@@ -109,114 +123,206 @@
   .verdict.good { background: var(--good-bg); color: var(--good); }
   .verdict.bad { background: var(--bad-bg); color: var(--bad); }
   .verdict .mark { font-family: var(--font-num); font-size: 1.6rem; line-height: 1; }
-
-  .actions { display: flex; gap: 10px; }
-  .actions button {
-    flex: 1; font: 800 1rem var(--font-body); padding: 14px; border-radius: 12px; cursor: pointer;
-    border: 2px solid var(--accent);
-  }
-  #check { background: var(--accent); color: var(--card); }
+  .verdict-body { flex: 1; min-width: 0; }
   .countdown { height: 4px; border-radius: 2px; background: currentColor; opacity: 0.35; margin-top: 8px; width: 100%; transform-origin: left; }
   .countdown.run { animation: drain var(--wait, 1500ms) linear forwards; }
   @keyframes drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
-  .verdict-body { flex: 1; min-width: 0; }
-  .actions button:disabled { opacity: 0.4; cursor: not-allowed; }
+
   button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 
-  .history { font-size: 0.9rem; color: var(--muted); }
-  .history h2 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 6px; font-weight: 800; }
-  .history ol { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-  .history li { font-family: var(--font-num); padding: 3px 9px; border-radius: 999px; font-variant-numeric: tabular-nums; }
+  /* Progress panels */
+  .panel {
+    background: var(--card); border-radius: 12px; padding: 16px;
+    border: 1px solid var(--rule); display: flex; flex-direction: column; gap: 10px; min-width: 0;
+  }
+  .panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .panel-head p { margin: 0; font-size: 0.85rem; color: var(--muted); }
+  .panel-head p b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .chart { position: relative; width: 100%; height: 180px; }
+  .chart svg { display: block; width: 100%; height: 100%; overflow: visible; }
+  .chart text { font: 600 11px var(--font-body); fill: var(--muted); font-variant-numeric: tabular-nums; }
+  .chart .value-label { font-weight: 800; fill: var(--ink); font-size: 12px; }
+  .chart .empty { font-size: 13px; }
+  .tip {
+    position: absolute; pointer-events: none; z-index: 2;
+    background: var(--ink); color: var(--card); font-size: 0.8rem; line-height: 1.35;
+    padding: 7px 10px; border-radius: 8px; white-space: nowrap; font-variant-numeric: tabular-nums;
+    box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.4);
+  }
+  .legend { display: flex; gap: 14px; font-size: 0.8rem; color: var(--muted); flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .panel-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ghost {
+    font: 700 0.85rem var(--font-body); background: transparent; color: var(--accent);
+    border: 1.5px solid var(--accent); border-radius: 10px; padding: 8px 12px; cursor: pointer;
+  }
+  .ghost.danger { color: var(--bad); border-color: var(--bad); }
+  details { font-size: 0.85rem; color: var(--muted); }
+  details summary { cursor: pointer; font-weight: 700; }
+  .table-wrap { overflow-x: auto; margin-top: 8px; }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 800; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  td { color: var(--ink); }
+  td.num, th.num { text-align: right; }
+
+  .history ol { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  .history li { font-family: var(--font-num); padding: 3px 9px; border-radius: 999px; font-variant-numeric: tabular-nums; font-size: 0.9rem; }
   .history li.good { background: var(--good-bg); color: var(--good); }
   .history li.bad { background: var(--bad-bg); color: var(--bad); }
-  .hint { font-size: 0.85rem; color: var(--muted); text-align: center; }
+  .history li.none { font-family: var(--font-body); color: var(--muted); padding: 0; }
+  .hint { font-size: 0.85rem; color: var(--muted); text-align: center; margin: 0; }
 
   @keyframes pop { 0% { transform: scale(0.96); } 60% { transform: scale(1.02); } 100% { transform: scale(1); } }
   @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
   .card.pop { animation: pop 0.3s ease-out; }
   .card.shake { animation: shake 0.3s ease-in-out; }
-  @media (prefers-reduced-motion: reduce) { .card.pop, .card.shake { animation: none; } }
+  @media (prefers-reduced-motion: reduce) { .card.pop, .card.shake, .countdown.run { animation: none; } }
 </style>
 <!-- ARTIFACT-HEAD-END -->
 </head>
 <body>
 <!-- ARTIFACT-BODY-START -->
 <main class="wrap">
-  <header>
-    <h1>Sum Sprint</h1>
-    <div class="levels" role="group" aria-label="Difficulty">
-      <button type="button" data-max="10" aria-pressed="true" id="lvl-easy">Easy</button>
-      <button type="button" data-max="50" aria-pressed="false" id="lvl-med">Medium</button>
-      <button type="button" data-max="100" aria-pressed="false" id="lvl-hard">Hard</button>
-    </div>
-  </header>
+  <h1>Sum Sprint</h1>
 
-  <section class="stats" aria-label="Score">
-    <div class="stat"><b id="s-correct">0</b><span>Correct</span></div>
+  <section class="controls" aria-label="Practice settings">
+    <div class="seg" role="group" aria-label="Mode">
+      <button type="button" id="mode-random" data-mode="random" aria-pressed="true">Random sums</button>
+      <button type="button" id="mode-count" data-mode="count" aria-pressed="false">Count by</button>
+    </div>
+    <div class="row" id="opts-random" role="group" aria-label="Difficulty">
+      <span class="label">Numbers</span>
+      <button type="button" class="chip" data-max="10" aria-pressed="true" id="lvl-easy">Easy 0–10</button>
+      <button type="button" class="chip" data-max="50" aria-pressed="false" id="lvl-med">Medium 0–50</button>
+      <button type="button" class="chip" data-max="100" aria-pressed="false" id="lvl-hard">Hard 0–100</button>
+    </div>
+    <div class="row" id="opts-count" role="group" aria-label="Step size" hidden></div>
+  </section>
+
+  <section class="stats" aria-label="This session's score">
+    <div class="stat"><b id="s-points">0</b><span>Points</span></div>
     <div class="stat"><b id="s-tried">0</b><span>Attempted</span></div>
     <div class="stat"><b id="s-streak">0</b><span>Streak</span></div>
   </section>
 
   <section class="card" id="card" aria-live="polite">
     <form id="quiz" autocomplete="off">
+      <div class="eyebrow" id="eyebrow">Easy · numbers 0–10</div>
+      <div class="sum">
       <div class="problem">
         <span></span><span id="a">5</span>
         <span class="op">+</span><span id="b">8</span>
+      </div>
         <div class="bar"></div>
         <div class="answer-row">
           <span class="eq">=</span>
-          <label for="answer" class="sr" hidden>Your answer</label>
           <input id="answer" type="number" inputmode="numeric" aria-label="Your answer" required>
+          <button type="submit" id="submit">Submit</button>
         </div>
       </div>
-      <div class="verdict idle" id="verdict">Type your answer and press Enter.</div>
+      <div class="verdict idle" id="verdict">Type your answer, then press Submit or Enter.</div>
     </form>
   </section>
 
-  <div class="actions">
-    <button type="submit" form="quiz" id="check">Check</button>
-  </div>
-
   <section class="history" aria-label="Recent answers">
-    <h2>Recent</h2>
+    <h2>Recent answers</h2>
     <ol id="history"></ol>
   </section>
-  <p class="hint">Check shows the result, then the next question appears by itself. Press Enter to skip the wait.</p>
+
+  <section class="panel" aria-labelledby="h-session">
+    <div class="panel-head">
+      <h2 id="h-session">This session</h2>
+      <p><b id="sess-points">0</b> points from <b id="sess-tried">0</b> questions</p>
+    </div>
+    <div class="chart" id="chart-session"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-all">
+    <div class="panel-head">
+      <h2 id="h-all">All sessions</h2>
+      <p>Best: <b id="best">0</b> points</p>
+    </div>
+    <div class="legend">
+      <span><i style="background: var(--accent)"></i>This session</span>
+      <span><i style="background: var(--accent-soft)"></i>Earlier sessions</span>
+    </div>
+    <div class="chart" id="chart-all"></div>
+    <details>
+      <summary>Show as table</summary>
+      <div class="table-wrap"><table id="table-all"></table></div>
+    </details>
+    <div class="panel-actions">
+      <button type="button" class="ghost" id="new-session">Start new session</button>
+      <button type="button" class="ghost danger" id="clear">Clear all sessions</button>
+    </div>
+  </section>
+
+  <p class="hint">Each correct answer is 1 point. Sessions are saved in this browser only.</p>
 </main>
 
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
   const els = {
-    a: $("a"), b: $("b"), answer: $("answer"), verdict: $("verdict"), card: $("card"),
-    check: $("check"), form: $("quiz"), history: $("history"),
-    correct: $("s-correct"), tried: $("s-tried"), streak: $("s-streak"),
+    a: $("a"), b: $("b"), answer: $("answer"), verdict: $("verdict"), card: $("card"), eyebrow: $("eyebrow"),
+    submit: $("submit"), form: $("quiz"), history: $("history"),
+    points: $("s-points"), tried: $("s-tried"), streak: $("s-streak"),
+    sessPoints: $("sess-points"), sessTried: $("sess-tried"), best: $("best"),
+    chartSession: $("chart-session"), chartAll: $("chart-all"), table: $("table-all"),
+    optsRandom: $("opts-random"), optsCount: $("opts-count"),
   };
+  const SVG = "http://www.w3.org/2000/svg";
+  const STORE_KEY = "sum-sprint-sessions";
+  const WAIT_CORRECT = 1500, WAIT_WRONG = 3000; // how long the result stays before the next question (ms)
+  const STEPS = [2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const LEVEL_NAMES = { 10: "Easy", 50: "Medium", 100: "Hard" };
 
-  const state = { max: 10, a: 5, b: 8, answered: false, timer: null, correct: 0, tried: 0, streak: 0, log: [] };
+  // ---------- Saved sessions (browser storage; may be unavailable) ----------
+  function loadSessions() {
+    try { const v = JSON.parse(localStorage.getItem(STORE_KEY) || "[]"); return Array.isArray(v) ? v : []; }
+    catch (e) { return []; }
+  }
+  function saveSessions() {
+    const all = past.concat(cur.tried ? [cur] : []).slice(-50);
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(all)); } catch (e) { /* storage blocked: keep in memory */ }
+  }
+  const freshSession = () => ({ start: Date.now(), mode: "", points: 0, tried: 0, answers: [] });
 
-  // Random whole number from 0 to max, inclusive.
+  let past = loadSessions();
+  let cur = freshSession();
+
+  // ---------- Quiz state ----------
+  const state = {
+    mode: "random", max: 10, step: 5, total: 5, // total = running total in Count by mode
+    a: 5, b: 8, answered: false, timer: null, streak: 0, log: [],
+  };
   const rand = (max) => Math.floor(Math.random() * (max + 1));
-
-  // How long the result stays on screen before the next question (ms).
-  const WAIT_CORRECT = 1500, WAIT_WRONG = 3000;
+  const modeLabel = () => state.mode === "random" ? LEVEL_NAMES[state.max] : "Count by " + state.step;
 
   function newQuestion() {
     clearTimeout(state.timer); state.timer = null;
-    let a, b;
-    do { a = rand(state.max); b = rand(state.max); }
-    while (a === state.a && b === state.b); // avoid repeating the same question twice in a row
-    state.a = a; state.b = b; state.answered = false;
-    els.a.textContent = a; els.b.textContent = b;
+    if (state.mode === "random") {
+      let a, b;
+      do { a = rand(state.max); b = rand(state.max); } while (a === state.a && b === state.b);
+      state.a = a; state.b = b;
+      els.eyebrow.textContent = LEVEL_NAMES[state.max] + " · numbers 0–" + state.max;
+    } else {
+      state.a = state.total; state.b = state.step;
+      els.eyebrow.textContent = "Counting by " + state.step + "s · step " + (state.total / state.step);
+    }
+    state.answered = false;
+    els.a.textContent = state.a; els.b.textContent = state.b;
     els.answer.value = ""; els.answer.disabled = false;
     els.verdict.className = "verdict idle";
-    els.verdict.textContent = "Type your answer and press Enter.";
+    els.verdict.textContent = "Type your answer, then press Submit or Enter.";
     els.card.classList.remove("pop", "shake");
     els.answer.focus();
   }
 
   function check() {
-    if (state.answered) { newQuestion(); return; }
+    if (state.answered) { newQuestion(); return; } // pressing Submit/Enter again skips the wait
     const raw = els.answer.value.trim();
     if (raw === "") {
       els.verdict.className = "verdict idle";
@@ -227,18 +333,25 @@
     const given = Number(raw);
     const expected = state.a + state.b;
     const ok = given === expected;
-
     state.answered = true;
-    state.tried++;
-    if (ok) { state.correct++; state.streak++; } else { state.streak = 0; }
+    state.streak = ok ? state.streak + 1 : 0;
 
-    els.verdict.className = "verdict " + (ok ? "good" : "bad");
+    // Record in the session: 1 point per correct answer.
+    cur.tried++; if (ok) cur.points++;
+    const label = modeLabel();
+    cur.mode = !cur.mode || cur.mode === label ? label : "Mixed";
+    cur.answers.push({ q: state.a + " + " + state.b, given, ok });
+    saveSessions();
+
+    // In Count by mode the right total carries on, even after a wrong answer.
+    if (state.mode === "count") state.total = expected;
+
     const wait = ok ? WAIT_CORRECT : WAIT_WRONG;
+    els.verdict.className = "verdict " + (ok ? "good" : "bad");
     els.verdict.innerHTML = '<span class="mark">' + (ok ? "✓" : "✗") + '</span><div class="verdict-body">'
-      + (ok ? "Correct" : "Not quite <small>— " + state.a + " + " + state.b + " = " + expected + "</small>")
+      + (ok ? "Correct · +1 point" : "Not quite <small>— " + state.a + " + " + state.b + " = " + expected + "</small>")
       + '<div class="countdown" style="--wait:' + wait + 'ms"></div></div>';
     requestAnimationFrame(() => { const bar = els.verdict.querySelector(".countdown"); if (bar) bar.classList.add("run"); });
-
     els.card.classList.remove("pop", "shake");
     void els.card.offsetWidth; // restart the animation
     els.card.classList.add(ok ? "pop" : "shake");
@@ -247,28 +360,213 @@
     state.log.unshift({ text: state.a + "+" + state.b + "=" + given, ok });
     state.log = state.log.slice(0, 10);
     render();
-    els.check.focus(); // keeps Enter working to skip ahead
+    els.submit.focus(); // Enter now skips ahead
     state.timer = setTimeout(newQuestion, wait);
   }
 
+  // ---------- Rendering ----------
   function render() {
-    els.correct.textContent = state.correct;
-    els.tried.textContent = state.tried;
+    els.points.textContent = cur.points;
+    els.tried.textContent = cur.tried;
     els.streak.textContent = state.streak;
+    els.sessPoints.textContent = cur.points;
+    els.sessTried.textContent = cur.tried;
     els.history.innerHTML = state.log.length
       ? state.log.map((r) => '<li class="' + (r.ok ? "good" : "bad") + '">' + r.text + "</li>").join("")
-      : '<li style="font-family:inherit;padding:0">Your answers will show up here.</li>';
+      : '<li class="none">Your answers will show up here.</li>';
+    drawSessionChart();
+    drawAllChart();
   }
 
+  const el = (tag, attrs, parent) => {
+    const n = document.createElementNS(SVG, tag);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(n);
+    return n;
+  };
+  // A tick step of 1, 2, 5, 10, 20... giving about `count` ticks up to `max`.
+  function niceStep(max, count) {
+    const raw = Math.max(1, max / count);
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const n = raw / mag;
+    return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * mag;
+  }
+  function setupChart(box) {
+    box.innerHTML = "";
+    const W = box.clientWidth || 480, H = box.clientHeight || 180;
+    const svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img" }, box);
+    const tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true; box.appendChild(tip);
+    return { svg, tip, W, H };
+  }
+  function showTip(box, tip, html, px, py) {
+    tip.innerHTML = html; tip.hidden = false;
+    const bw = box.clientWidth, tw = tip.offsetWidth, th = tip.offsetHeight;
+    let left = px - tw / 2; left = Math.max(0, Math.min(bw - tw, left));
+    let top = py - th - 12; if (top < -8) top = py + 14;
+    tip.style.left = left + "px"; tip.style.top = top + "px";
+  }
+  function yAxis(svg, m, W, y, yMax, step) {
+    for (let v = 0; v <= yMax; v += step) {
+      el("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: "var(--rule)", "stroke-width": 1 }, svg);
+      el("text", { x: m.l - 8, y: y(v) + 4, "text-anchor": "end" }, svg).textContent = v;
+    }
+  }
+
+  // Line: total points after each question in this session. Each correct answer steps up by 1.
+  function drawSessionChart() {
+    const box = els.chartSession;
+    const { svg, tip, W, H } = setupChart(box);
+    const m = { l: 32, r: 16, t: 14, b: 28 };
+    const n = cur.answers.length;
+    const pts = [0]; cur.answers.forEach((a) => pts.push(pts[pts.length - 1] + (a.ok ? 1 : 0)));
+    const ys = niceStep(Math.max(4, pts[n]), 4);
+    const yMax = Math.max(ys * 4, Math.ceil(pts[n] / ys) * ys);
+    const xMax = Math.max(n, 10);
+    const x = (i) => m.l + (i / xMax) * (W - m.l - m.r);
+    const y = (v) => m.t + (1 - v / yMax) * (H - m.t - m.b);
+    svg.setAttribute("aria-label", "Points after each question: " + pts[n] + " points from " + n + " questions");
+    yAxis(svg, m, W, y, yMax, ys);
+    const xs = niceStep(xMax, Math.max(2, Math.floor((W - m.l - m.r) / 50)));
+    for (let i = 0; i <= xMax; i += xs) {
+      el("text", { x: x(i), y: H - 8, "text-anchor": "middle" }, svg).textContent = i;
+    }
+    if (n === 0) {
+      el("text", { x: (m.l + W - m.r) / 2, y: (m.t + H - m.b) / 2, "text-anchor": "middle", class: "empty" }, svg)
+        .textContent = "Answer a question to start your line";
+      return;
+    }
+    let d = "M" + x(0) + " " + y(0);
+    for (let i = 1; i <= n; i++) d += " L" + x(i) + " " + y(pts[i]);
+    el("path", { d: d + " L" + x(n) + " " + y(0) + " Z", fill: "var(--accent-wash)", stroke: "none" }, svg);
+    el("path", { d, fill: "none", stroke: "var(--accent)", "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+    for (let i = 1; i <= n; i++) {
+      if (!cur.answers[i - 1].ok) continue;
+      el("circle", { cx: x(i), cy: y(pts[i]), r: i === n ? 5.5 : 4, fill: "var(--accent)", stroke: "var(--card)", "stroke-width": 2 }, svg);
+    }
+    const endLabel = el("text", { x: x(n), y: y(pts[n]) - 12, "text-anchor": x(n) > W - 60 ? "end" : "middle", class: "value-label" }, svg);
+    endLabel.textContent = pts[n] + (pts[n] === 1 ? " pt" : " pts");
+
+    const cross = el("line", { y1: m.t, y2: H - m.b, stroke: "var(--muted)", "stroke-width": 1, "stroke-dasharray": "3 3", opacity: 0 }, svg);
+    const hit = el("rect", { x: m.l, y: 0, width: W - m.l - m.r, height: H, fill: "transparent" }, svg);
+    const move = (e) => {
+      const r = svg.getBoundingClientRect();
+      const px = (e.clientX - r.left) * (W / r.width);
+      const i = Math.max(1, Math.min(n, Math.round(((px - m.l) / (W - m.l - m.r)) * xMax)));
+      const a = cur.answers[i - 1];
+      cross.setAttribute("x1", x(i)); cross.setAttribute("x2", x(i)); cross.setAttribute("opacity", 1);
+      showTip(box, tip, "<b>Question " + i + "</b> · " + a.q + " = " + a.given + " " + (a.ok ? "✓" : "✗")
+        + "<br>" + pts[i] + (pts[i] === 1 ? " point" : " points") + " so far", x(i) * (r.width / W), y(pts[i]) * (r.height / H));
+    };
+    hit.addEventListener("pointermove", move);
+    hit.addEventListener("pointerdown", move);
+    hit.addEventListener("pointerleave", () => { tip.hidden = true; cross.setAttribute("opacity", 0); });
+  }
+
+  // Bars: points per session, oldest on the left, this session highlighted.
+  function drawAllChart() {
+    const box = els.chartAll;
+    const { svg, tip, W, H } = setupChart(box);
+    const all = past.concat([cur]);
+    const shown = all.slice(-20);
+    const offset = all.length - shown.length;
+    const best = Math.max(0, ...all.map((s) => s.points));
+    els.best.textContent = best;
+    const m = { l: 32, r: 8, t: 20, b: 28 };
+    const ys = niceStep(Math.max(4, best), 4);
+    const yMax = Math.max(ys * 4, Math.ceil(best / ys) * ys);
+    const y = (v) => m.t + (1 - v / yMax) * (H - m.t - m.b);
+    const slot = (W - m.l - m.r) / shown.length;
+    const bw = Math.max(4, Math.min(34, slot * 0.62));
+    svg.setAttribute("aria-label", "Points per session for " + all.length + " sessions. Best " + best);
+    yAxis(svg, m, W, y, yMax, ys);
+    const labelEvery = Math.ceil(28 / slot);
+    shown.forEach((s, k) => {
+      const num = offset + k + 1, isCur = s === cur;
+      const cx = m.l + slot * (k + 0.5), base = y(0), top = y(s.points), h = base - top;
+      if (h > 0) {
+        const r = Math.min(4, bw / 2, h), x0 = cx - bw / 2, x1 = cx + bw / 2;
+        el("path", {
+          d: "M" + x0 + " " + base + " V" + (top + r) + " Q" + x0 + " " + top + " " + (x0 + r) + " " + top
+            + " H" + (x1 - r) + " Q" + x1 + " " + top + " " + x1 + " " + (top + r) + " V" + base + " Z",
+          fill: isCur ? "var(--accent)" : "var(--accent-soft)",
+        }, svg);
+      }
+      if (isCur) el("text", { x: cx, y: top - 6, "text-anchor": "middle", class: "value-label" }, svg).textContent = s.points;
+      if ((shown.length - 1 - k) % labelEvery === 0) {
+        el("text", { x: cx, y: H - 8, "text-anchor": "middle" }, svg).textContent = isCur ? "Now" : "#" + num;
+      }
+      const hit = el("rect", { x: cx - slot / 2, y: 0, width: slot, height: H - m.b, fill: "transparent" }, svg);
+      const show = () => {
+        const r = svg.getBoundingClientRect();
+        const date = new Date(s.start).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+        showTip(box, tip, "<b>Session " + num + (isCur ? " (now)" : "") + "</b> · " + date
+          + "<br>" + s.points + " points from " + s.tried + " questions" + (s.mode ? "<br>" + s.mode : ""),
+          cx * (r.width / W), top * (r.height / H));
+      };
+      hit.addEventListener("pointerenter", show);
+      hit.addEventListener("pointerdown", show);
+      hit.addEventListener("pointerleave", () => { tip.hidden = true; });
+    });
+    if (!past.length) {
+      el("text", { x: (m.l + W - m.r) / 2, y: m.t + 18, "text-anchor": "middle", class: "empty" }, svg)
+        .textContent = "Earlier sessions will appear here";
+    }
+
+    els.table.innerHTML = "<tr><th>Session</th><th>Date</th><th>Mode</th><th class='num'>Points</th><th class='num'>Questions</th></tr>"
+      + all.map((s, i) => "<tr><td>" + (i + 1) + (s === cur ? " (now)" : "") + "</td><td>"
+        + new Date(s.start).toLocaleDateString(undefined, { month: "short", day: "numeric" }) + "</td><td>"
+        + (s.mode || "—") + "</td><td class='num'>" + s.points + "</td><td class='num'>" + s.tried + "</td></tr>").reverse().join("");
+  }
+
+  // ---------- Controls ----------
   els.form.addEventListener("submit", (e) => { e.preventDefault(); check(); });
 
-  document.querySelectorAll(".levels button").forEach((btn) => {
+  const press = (group, btn) => group.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+
+  document.querySelectorAll(".seg button").forEach((btn) => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".levels button").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
-      state.max = Number(btn.dataset.max);
+      press(btn.parentElement, btn);
+      state.mode = btn.dataset.mode;
+      els.optsRandom.hidden = state.mode !== "random";
+      els.optsCount.hidden = state.mode !== "count";
+      if (state.mode === "count") state.total = state.step;
       newQuestion();
     });
   });
+  els.optsRandom.querySelectorAll("button").forEach((btn) => {
+    btn.addEventListener("click", () => { press(els.optsRandom, btn); state.max = Number(btn.dataset.max); newQuestion(); });
+  });
+  els.optsCount.innerHTML = '<span class="label">Step</span>' + STEPS.map((s) =>
+    '<button type="button" class="chip" id="step-' + s + '" data-step="' + s + '" aria-pressed="' + (s === state.step) + '">+' + s + "</button>").join("");
+  els.optsCount.querySelectorAll("button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      press(els.optsCount, btn);
+      state.step = Number(btn.dataset.step); state.total = state.step; // restart the count: 5 + 5, 10 + 5, ...
+      newQuestion();
+    });
+  });
+
+  $("new-session").addEventListener("click", () => {
+    if (cur.tried) past.push(cur);
+    cur = freshSession(); state.streak = 0; state.log = [];
+    if (state.mode === "count") state.total = state.step;
+    saveSessions(); render(); newQuestion();
+  });
+  let clearArmed = null;
+  $("clear").addEventListener("click", (e) => {
+    const btn = e.currentTarget;
+    if (!clearArmed) { // two-step confirm built into the button
+      btn.textContent = "Click again to delete all";
+      clearArmed = setTimeout(() => { btn.textContent = "Clear all sessions"; clearArmed = null; }, 3000);
+      return;
+    }
+    clearTimeout(clearArmed); clearArmed = null; btn.textContent = "Clear all sessions";
+    past = []; cur = freshSession(); state.streak = 0; state.log = [];
+    saveSessions(); render(); newQuestion();
+  });
+
+  let resizeTimer;
+  window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { drawSessionChart(); drawAllChart(); }, 120); });
 
   render();
   els.answer.focus();
